@@ -1,7 +1,6 @@
 <?php
 include_once(__DIR__ . '/../src/load.php');
 
-use Symfony\Component\Mime\Email;
 
 //cutly
 $cutly = new cutURL();
@@ -16,7 +15,7 @@ $exp_accompte = "#Acompte demandé : ([0-9]{1,5},[0-9]{2}) €#";
 
 
 //test si token passer en param
-if ($_GET['token'] === $_SERVER['TOKEN']) {
+if ($_GET['token'] === $_SERVER['APP_TOKEN']) {
 
 
     if (!isset($_FILES['pdf'])) {
@@ -54,24 +53,24 @@ if ($_GET['token'] === $_SERVER['TOKEN']) {
                 //recherche de accompte
                 if (preg_match($exp_accompte, $p1->getText(), $tab_accompte)) {
                     $mt_accompte = explode(',', $tab_accompte[1]);
-                    $url_paiement = $_SERVER['CB_URL'] . '?total=' . $mt_accompte[0] . $mt_accompte[1] . '.&email=' . urlencode($_POST['email']) . '&ref_paiment=' . urlencode($num_devis);
+                    //url de generation du paiuement
+                    $url_paiement = $_SERVER['CB_URL'] . '?total=' . $mt_accompte[0] . $mt_accompte[1] . '&email=' . urlencode($_POST['email']) . '&ref_paiment=' . urlencode($num_devis);
                     $tinyurl = $cutly->cut($url_paiement);
 
                     $url_mail = $tinyurl['status'] == 7 && $tinyurl['shortLink'] ? $tinyurl['shortLink'] : $url_paiement;
 
-                    $email = new Email();
-                    $email->from($_SERVER['MAILER_EMAIL_DEVIS_EXP'])
-                        ->to($_POST['email'])
-                        ->subject('Diruy : Payer Votre accompte')
-                        ->text('Madame, Monsieur,
+                    $email = new Swift_Message('Diruy : Payer Votre accompte');
+                    $email->setFrom($_SERVER['MAILER_EMAIL_DEVIS_EXP'])
+                        ->setTo($_POST['email'])
+                        ->setBody('Madame, Monsieur,
                         Merci de votre confiance.
                         Votre commande sera définitivement enregistrée après règlement de l’acompte dû soit ' . $mt_accompte[0] . ',' . $mt_accompte[1] . '&euro;.<br>
                         Afin de procéder au paiement en ligne, merci de vous rendre sur : ' . $url_mail)
-                        ->html('Madame, Monsieur,<br>
+                        ->addPart('Madame, Monsieur,<br>
                     Merci de votre confiance.<br>
                     Votre commande sera définitivement enregistrée après règlement de l’acompte dû soit ' . $mt_accompte[0] . ',' . $mt_accompte[1] . '&euro;.<br>
                     <a href="' . $url_mail . '">Afin de procéder au paiement en ligne, merci de cliquer ici.</a>
-                    ');
+                    ','text/html');
                     $mailer->send($email);
                 } else {
                     mail($_SERVER['MAILER_EMAIL_ADMIN'], 'Sell&Sign : Erreur fichier', 'Pas de numero montant accompte .....');
