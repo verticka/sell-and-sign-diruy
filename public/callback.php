@@ -1,5 +1,7 @@
 <?php
 include_once(__DIR__ . '/../src/load.php');
+$txt_pdf_file = __DIR__.'/../var/pdf.txt';
+$pdf_local = __DIR__.'/../var/pdf.pdf';
 
 function InsMysql($val,$type='s')
 {
@@ -15,9 +17,9 @@ function InsMysql($val,$type='s')
 }
 
 
-file_put_contents('http.log', print_r($_POST,true));
-file_put_contents('files.log', print_r($_FILES,true));
-file_put_contents('get.log', print_r($_GET,true));
+file_put_contents(__DIR__.'/../var/http.log', print_r($_POST,true));
+file_put_contents(__DIR__.'/../var/files.log', print_r($_FILES,true));
+file_put_contents(__DIR__.'/../var/get.log', print_r($_GET,true));
 
 //cutly
 $cutly = new cutURL();
@@ -27,7 +29,7 @@ $temp_pdf = sys_get_temp_dir() . '/' . uniqid('sell') . '.pdf';
 //expression reguliere pour devis
 $exp_devis = "#Devis n° (D[A-Z]{1,5}[0-9]{5}[a-z]?)#";
 //expression reguliere pour acompte
-$exp_acompte = "#Acompte demandé : ([0-9]{1,5},[0-9]{2}) €#";
+$exp_acompte = "#Acompte demandé : ([0-9 ]{1,5},[0-9]{2}) €#";
 
 
 
@@ -56,27 +58,41 @@ else {
             && (isset($_POST['cell_phone']) && $_POST['cell_phone'])
         ) {
 
-
-            //Lecture du pdf
-            $parser = new \Smalot\PdfParser\Parser();
-            $pdf    = $parser->parseFile($temp_pdf);
+            if(file_exists($txt_pdf_file ))
+            unlink($txt_pdf_file);
 
 
-            //on obtiens les pages
-            $pages  = $pdf->getPages();
-            $p1 = $pages[0];
+            if(file_exists($pdf_local ))
+                unlink($pdf_local);
+
+            //tranforme pdf en text
+            copy($temp_pdf,$pdf_local);
+            exec('pdftotext '.$pdf_local.' '.$txt_pdf_file );
+            //copie du fichier pdf en local
+
+
+            if(!file_exists($txt_pdf_file ))
+            {
+                $log->error('Impossible de transformer le pdf en TEXT, le fichier n\'esixte pas verifier si pdftotext est installer');
+                mail($_SERVER['MAILER_EMAIL_ADMIN'], 'Sell&Sign : post text pdf', 'Impossible de transformer le pdf en TEXT, le fichier n\'esixte pas verifier si pdftotext est installer');
+                exit;
+            }
+            else
+            $txt_pdf = file_get_contents($txt_pdf_file);
+
+
 
             //test si code devis trouver
-            if (preg_match($exp_devis, $p1->getText(), $tab_devis)) {
+            if (preg_match($exp_devis, $txt_pdf, $tab_devis)) {
                 $num_devis = $tab_devis[1];
 
 
 
                 //recherche de acompte
-                if (preg_match($exp_acompte, $p1->getText(), $tab_acompte)) {
+                if (preg_match($exp_acompte, $txt_pdf, $tab_acompte)) {
                     $mt_acompte = explode(',', $tab_acompte[1]);
                     //url de generation du paiuement
-                    $url_paiement = $_SERVER['CB_URL'] . '?total=' . $mt_acompte[0] . $mt_acompte[1] . '&email=' . urlencode($_POST['email']) . '&ref_paiment=' . urlencode($num_devis);
+                    $url_paiement = $_SERVER['CB_URL'] . '?total=' . str_replace(' ','',$mt_acompte[0]) .  str_replace(' ','',$mt_acompte[1]) . '&email=' . urlencode($_POST['email']) . '&ref_paiment=' . urlencode($num_devis);
                     $tinyurl = $cutly->cut($url_paiement);
 
                     $url_mail = $tinyurl['status'] == 7 && $tinyurl['shortLink'] ? $tinyurl['shortLink'] : $url_paiement;
@@ -140,7 +156,8 @@ else {
 
                         //copy du fichier en GED
                         $pdf_ged = $_SERVER['GED_BARCODE'].'/Fin/GED'.$id_ged;
-                        file_put_contents($pdf_ged.'.txt',$pdf->getText());
+                        file_put_contents($pdf_ged.'.txt',$txt_pdf);
+
                         copy($temp_pdf,$pdf_ged.'.pdf');
 
 
@@ -219,7 +236,8 @@ else {
                     //ajout en db
                     mysqli_query($mysql,$sql_ins);
 
-                    file_put_contents('sqlins.txt',$sql_ins);
+                    file_put_contents(__DIR__.'/../var/sqlins.txt',$sql_ins);
+
 
                     //envoie d'un sms
                     $txt_sms = "DIRUY :\nPour valider votre comande, merci de payer votre acompte de ".$mt_acompte[0].",".$mt_acompte[1]." euro sur :\n".$url_mail;
