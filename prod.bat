@@ -1,0 +1,1 @@
+bash -c "rsync -vza --exclude .git --exclude .idea /mnt/c/dev/php/sell-and-sign-diruy/ root@192.168.10.6:/var/www/sell-and-sign-diruy/"

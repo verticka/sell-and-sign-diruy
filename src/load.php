@@ -28,3 +28,8 @@ $log = new Logger('app_' . $_SERVER['APP_ENV']);
 $log->pushHandler(new StreamHandler(__DIR__ . '/../var/' . $_SERVER['APP_ENV'] . '.log', Logger::WARNING));
 //ajout de cutly
 include_once(__DIR__ . '/cutly.php');
+
+/******************* MYSQL **************/
+$parse_mysql_url = parse_url($_SERVER['DATABASE_URL_INTRA']);
+$mysql = mysqli_connect($parse_mysql_url['host'],$parse_mysql_url['user'],$parse_mysql_url['pass'],substr($parse_mysql_url['path'],1),$parse_mysql_url['port']);
+

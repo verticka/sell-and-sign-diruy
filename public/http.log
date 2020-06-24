@@ -1,0 +1,21 @@
+Array
+(
+    [number] => 1236
+    [customer_code] => 1236
+    [civility] => MONSIEUR
+    [firstname] => Emmanuel
+    [lastname] => Quentin
+    [email] => e.quentin@diruy.com
+    [cell_phone] => 0629684221
+    [address_1] => 356 bis rue d'abbeville
+    [address_2] => 
+    [postal_code] => 80000
+    [city] => 
+    [company_name] => 
+    [phone] => 0322000000
+    [job_title] => test
+    [vendor_email] => vendeur@diruy.com
+    [id] => 1
+    [mode] => 1
+    [date] => 2019-01-01 12:00:30
+)
